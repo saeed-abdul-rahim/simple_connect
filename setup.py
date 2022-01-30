@@ -18,6 +18,7 @@ setuptools.setup(
     description="Simplify Connection",
     long_description=long_description,
     long_description_content_type="text/markdown",
+    url='https://github.com/saeed-abdul-rahim/simple_connesct',
     packages=setuptools.find_packages(),
     install_requires=[
         'httplib2', 'oauth2client',
