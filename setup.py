@@ -23,6 +23,6 @@ setuptools.setup(
     install_requires=[
         'httplib2', 'oauth2client',
         'pandas', 'pymysql', 'sqlalchemy', 'sshtunnel',
-        'google-api-python-client', 'boto3', 'tqdm',
+        'google-api-python-client', 'boto3', 'tqdm', 'paramiko'
     ]
 )

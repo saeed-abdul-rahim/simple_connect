@@ -7,3 +7,4 @@ sshtunnel
 google-api-python-client
 boto3
 tqdm
+paramiko
