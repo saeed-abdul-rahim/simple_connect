@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "simple_connect"
+version = "1.0.5"
+authors = [
+  { name="Saeed Abdul Rahim", email="sae.ar2@gmail.com" },
+]
+description = "Simplify SQL Connection for data analysis"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/saeed-abdul-rahim/simple_connect"
+"Bug Tracker" = "https://github.com/saeed-abdul-rahim/simple_connect/issues"

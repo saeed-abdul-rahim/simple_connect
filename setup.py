@@ -12,13 +12,13 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="simple_connect",
-    version="1.0.4",
+    version="1.0.5",
     author="Saeed",
     author_email="sae.ar2@gmail.com",
     description="Simplify Connection",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url='https://github.com/saeed-abdul-rahim/simple_connesct',
+    url='https://github.com/saeed-abdul-rahim/simple_connect',
     packages=setuptools.find_packages(),
     install_requires=[
         'httplib2', 'oauth2client',

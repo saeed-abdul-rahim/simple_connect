@@ -56,7 +56,8 @@ class Common(object):
         stmt="UPDATE "+table_name+" SET "+set_columns+" WHERE "+where_columns
         stmt=text(stmt)
         for line in tqdm(dict_data):
-              conn.execute(stmt, **line)   
+              conn.execute(stmt, **line)  
+        return self 
     
     def delete_main(self,df,conn,table_name,where_cols):
         dict_data = df.to_dict('records')
@@ -65,7 +66,12 @@ class Common(object):
         stmt="DELETE FROM "+table_name+" WHERE "+where_columns
         stmt=text(stmt)
         for line in tqdm(dict_data):
-              conn.execute(stmt, **line)   
+              conn.execute(stmt, **line)
+        return self
+    
+    def _execute(self, conn, stmt):
+        conn.execute(text(stmt))
+        return self
 
 class Connect(Common):
     
@@ -91,6 +97,9 @@ class Connect(Common):
         
     def delete_row(self,df,table_name,where_cols):
         self.common.delete_main(df,self.mydb,table_name,where_cols)
+        
+    def execute(self, stmt):
+        self.common._execute(self.mydb, stmt)
     
 class BastionConnect(Common):
         
@@ -155,6 +164,12 @@ class BastionConnect(Common):
         self.server.start()
         self.start_conn()
         self.common.delete_main(df,self.mydb,table_name,where_cols)  
+        self.server.stop()
+    
+    def execute(self, stmt):
+        self.server.start()
+        self.start_conn()
+        self.common._execute(self.mydb, stmt)
         self.server.stop()
 
 
