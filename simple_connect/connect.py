@@ -24,6 +24,7 @@ import pymysql as db
 from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 from sshtunnel import SSHTunnelForwarder
+import paramiko
 from googleapiclient.discovery import build
 from googleapiclient import errors, discovery
 from googleapiclient.http import MediaIoBaseDownload
@@ -33,12 +34,10 @@ import boto3
 from tqdm import tqdm
 
 class Common(object):
-    
-    def __init__(self,sql_serverhost,sql_user,sql_password,database):
-        self.sql_serverhost = sql_serverhost
-        self.sql_user=sql_user
-        self.sql_password=sql_password
-        self.database=database
+
+    def __init__(self, credentials, database):
+        self.__set_credentials(credentials)
+        self.database = database
     
     def create_sq_string(col_set, sep):
         cols=""
@@ -48,7 +47,7 @@ class Common(object):
                 cols = cols+" "+sep+" "
         return cols
     
-    def update_main(self,df,conn,table_name,set_cols,where_cols):
+    def update_main(self, df, conn, table_name, set_cols, where_cols):
         dict_data = df.to_dict('records')
         dict_data=tuple(dict_data)
         set_columns=Common.create_sq_string(set_cols, ",")
@@ -59,7 +58,7 @@ class Common(object):
               conn.execute(stmt, **line)  
         return self 
     
-    def delete_main(self,df,conn,table_name,where_cols):
+    def delete_main(self, df, conn, table_name, where_cols):
         dict_data = df.to_dict('records')
         dict_data=tuple(dict_data)
         where_columns=Common.create_sq_string(where_cols, "AND")
@@ -73,73 +72,78 @@ class Common(object):
         conn.execute(text(stmt))
         return self
 
-class Connect(Common):
-    
-    def __init__(self,credentials,database):
-        cred_dir=os.path.join(os.path.expanduser('~'),'.credentials')
-        cred_file=os.path.join(cred_dir,credentials)
+    def __set_credentials(self, credentials):
+
+        self._cred_dir = os.path.join(os.path.expanduser('~'), '.credentials')
+        cred_file = os.path.join(self._cred_dir, credentials)
         with open(cred_file) as f:
             cred=json.load(f)
-        sql_serverhost=cred['SQL_HOST']
-        sql_user=cred['SQL_USER']
-        sql_password=cred['SQL_PASSWORD']
-        self.common=Common(sql_serverhost,sql_user,sql_password,database)
-        self.mydb=create_engine('mysql+pymysql://' + sql_user + ':' + sql_password + '@' + sql_serverhost + ':' + str(3306) + '/' + database , echo=False)
+        
+        self.localhost = '127.0.0.1'
+        self.sql_host = cred['SQL_HOST']
+        self.sql_user = cred['SQL_USER']
+        self.sql_password = cred['SQL_PASSWORD']
+
+        if 'BASTION_HOST' in cred:
+            self.bastion_host = cred['BASTION_HOST']
+            self.ssh_username = cred['SSH_USERNAME']
+            self.ssh_password = cred['SSH_PASSWORD']
+
+
+class Connect(Common):
+    
+    def __init__(self, credentials, database):
+        super().__init__(credentials, database)
+        self.db_engine = create_engine(f"mysql+pymysql://{self.sql_user}:{self.sql_password}@{self.sql_host}:3306/{self.database}", echo=False)
     
     def to_db(self,data,table):
-        data.to_sql(name=table, con=self.mydb, if_exists = 'append', index=False, chunksize=5000)
+        data.to_sql(name=table, con=self.db_engine, if_exists = 'append', index=False, chunksize=5000)
         
     def query(self,q):
-        return pd.read_sql_query(q, self.mydb)
+        return pd.read_sql_query(q, self.db_engine)
     
     def update_table(self,df,table_name,set_cols,where_cols):
-        self.common.update_main(df,self.mydb,table_name,set_cols,where_cols)
+        self.update_main(df,self.db_engine,table_name,set_cols,where_cols)
         
     def delete_row(self,df,table_name,where_cols):
-        self.common.delete_main(df,self.mydb,table_name,where_cols)
+        self.delete_main(df,self.db_engine,table_name,where_cols)
         
     def execute(self, stmt):
-        self.common._execute(self.mydb, stmt)
+        self._execute(self.db_engine, stmt)
     
 class BastionConnect(Common):
         
-    def __init__(self, credentials, database, pem_path=None):
-        cred_dir=os.path.join(os.path.expanduser('~'),'.credentials')
-        cred_file=os.path.join(cred_dir,credentials)
-        with open(cred_file) as f:
-            cred=json.load(f)        
-        ssh_username=cred['SSH_USERNAME']
-        ssh_password=cred['SSH_PASSWORD']
-        sql_serverhost=cred['SQL_HOST']
-        sql_user=cred['SQL_USER']
-        sql_password=cred['SQL_PASSWORD']
-        self.bastion_host = cred['BASTION_HOST']
-        self.localhost = '127.0.0.1'
-        self.ssh_username = ssh_username
-        self.ssh_password=ssh_password
-        self.common=Common(sql_serverhost,sql_user,sql_password,database)
-        if pem_path:
+    def __init__(self, credentials, database, pem=None):
+        super().__init__(credentials, database)
+
+        if pem:
+            pem_path=os.path.join(self._cred_dir, pem)
+            pem_file = paramiko.RSAKey.from_private_key_file(pem_path)
             self.server = SSHTunnelForwarder(
-                        (self.bastion_host, 22),
-                          ssh_username=self.ssh_username,
-                          ssh_private_key=pem_path,
-                          remote_bind_address=(self.common.sql_serverhost, 3306))
+                (self.bastion_host, 22),
+                ssh_username=self.ssh_username,
+                ssh_private_key=pem_file,
+                remote_bind_address=(self.sql_host, 3306)
+            )
         else:
             self.server = SSHTunnelForwarder(
-                        (self.bastion_host, 22),
-                          ssh_username=self.ssh_username,
-                          ssh_password=self.ssh_password,
-                          remote_bind_address=(self.common.sql_serverhost, 3306))
+                (self.bastion_host, 22),
+                ssh_username=self.ssh_username,
+                ssh_password=self.ssh_password,
+                remote_bind_address=(self.sql_host, 3306)
+            )
         self.conn=None
-        self.mydb=None
+        self.db_engine=None
     
     def start_conn(self):
-        self.conn = db.connect(host=self.localhost,
-                      port=self.server.local_bind_port,
-                      user=self.common.sql_user,
-                      passwd=self.common.sql_password,
-                      db=self.common.database)
-        self.mydb=create_engine('mysql+pymysql://' + self.common.sql_user + ':' + self.common.sql_password + '@' + self.localhost + ':' + str(self.server.local_bind_port) + '/' + self.common.database , echo=False)
+        self.conn = db.connect(
+            host=self.localhost,
+            port=self.server.local_bind_port,
+            user=self.sql_user,
+            passwd=self.sql_password,
+            db=self.database
+        )
+        self.db_engine = create_engine(f"mysql+pymysql://{self.sql_user}:{self.sql_password}@{self.localhost}:{str(self.server.local_bind_port)}/{self.database}", echo=False)
         
     def query(self,q):
         self.server.start()
@@ -151,25 +155,25 @@ class BastionConnect(Common):
     def to_db(self,df,table):
         self.server.start()
         self.start_conn()
-        df.to_sql(name=table, con=self.mydb, if_exists = 'append', index=False, chunksize=5000)
+        df.to_sql(name=table, con=self.db_engine, if_exists = 'append', index=False, chunksize=5000)
         self.server.stop()
         
-    def update_table(self,df,table_name,set_cols,where_cols):
+    def update_table(self, df, table_name, set_cols, where_cols):
         self.server.start()
         self.start_conn()
-        self.common.update_main(df,self.mydb,table_name,set_cols,where_cols)  
+        self.update_main(df, self.db_engine, table_name, set_cols, where_cols)  
         self.server.stop()
         
-    def delete_row(self,df,table_name,where_cols):
+    def delete_row(self, df, table_name, where_cols):
         self.server.start()
         self.start_conn()
-        self.common.delete_main(df,self.mydb,table_name,where_cols)  
+        self.delete_main(df, self.db_engine, table_name, where_cols)  
         self.server.stop()
     
     def execute(self, stmt):
         self.server.start()
         self.start_conn()
-        self.common._execute(self.mydb, stmt)
+        self._execute(self.db_engine, stmt)
         self.server.stop()
 
 
