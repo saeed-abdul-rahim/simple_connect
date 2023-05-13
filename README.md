@@ -19,6 +19,7 @@ pip install simple-connect
 
 ## Secure your Database credentials
 
+#### This step is optional.
 Simple Connect tries to find your database / ssh credentials from a json file in ".credentials" folder which is in your home directory.
 Example for windows, mac and linux respectively:
 ```
@@ -28,7 +29,8 @@ C:\Users\John\.credentials\sample.json
 
 /home/John/.credentials/sample.json
 ```
-Create the directory and the json file.
+
+### Create the json file.
 
 Json file should be in your following format:
 ```
@@ -62,10 +64,18 @@ Basic connection:
 ```
 conn = connect.Connect('sample_credential.json', 'database_name')
 ```
+OR you can give the etire path of the json file:
+```
+conn = connect.Connect('C:\Users\John\.credentials\sample.json', 'database_name')
+```
 
 SSH connection:
 ```
 conn = connect.BastionConnect('sample_credential.json', 'database_name')
+```
+OR if you want to use your own ssh key:
+```
+conn = connect.BastionConnect('sample_credential.json', 'database_name', 'ssh_key.pem')
 ```
 
 ## Querying
@@ -105,4 +115,9 @@ conn.delete_row(dataframe, 'table_name', ['columns_where_contition_applies', ...
 Example:
 ```
 conn.delete_row(dataframe, 'sample_table', ['id', 'id_2'])
+```
+
+### Execute SQL statement
+```
+conn.execute(query)
 ```
