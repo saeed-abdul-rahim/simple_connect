@@ -7,5 +7,4 @@ simple_connect/connect.py
 simple_connect.egg-info/PKG-INFO
 simple_connect.egg-info/SOURCES.txt
 simple_connect.egg-info/dependency_links.txt
-simple_connect.egg-info/requires.txt
 simple_connect.egg-info/top_level.txt

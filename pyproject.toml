@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simple_connect"
-version = "1.1.0"
+version = "1.1.1"
 authors = [
   { name="Saeed Abdul Rahim", email="sae.ar2@gmail.com" },
 ]
