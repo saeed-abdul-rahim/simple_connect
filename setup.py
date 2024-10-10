@@ -12,7 +12,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="simple_connect",
-    version="1.1.0",
+    version="1.1.1",
     author="Saeed",
     author_email="sae.ar2@gmail.com",
     description="Simplify Connection",

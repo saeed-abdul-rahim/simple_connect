@@ -29,6 +29,7 @@ from googleapiclient.discovery import build
 from googleapiclient import errors, discovery
 from googleapiclient.http import MediaIoBaseDownload
 from httplib2 import Http
+from urllib.parse import quote_plus
 import io
 import boto3
 from tqdm import tqdm
@@ -81,8 +82,8 @@ class Common(object):
         
         self.localhost = '127.0.0.1'
         self.sql_host = cred['SQL_HOST']
-        self.sql_user = cred['SQL_USER']
-        self.sql_password = cred['SQL_PASSWORD']
+        self.sql_user = quote_plus(cred['SQL_USER'])
+        self.sql_password = quote_plus(cred['SQL_PASSWORD'])
 
         if 'BASTION_HOST' in cred:
             self.bastion_host = cred['BASTION_HOST']
